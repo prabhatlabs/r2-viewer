@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef, useEffect, type MouseEvent } from "react";
-import { ChevronRight, Copy, Download, Eye, Trash2 } from "lucide-react";
+import { useState, useRef, useEffect, useMemo, type MouseEvent } from "react";
+import { ArrowUp, ArrowDown, ChevronRight, Copy, Download, Eye, Trash2 } from "lucide-react";
 import {
     FaFileAudio,
     FaFileCode,
@@ -48,6 +48,8 @@ interface HoveredItem {
     type: "file" | "folder";
     rect: DOMRect;
 }
+
+type SortableItem = { kind: "folder" } & FolderItem | { kind: "file" } & FileItem;
 
 const getFileIcon = (filename: string, className?: string) => {
     const ext = filename.split(".").pop()?.toLowerCase();
@@ -174,6 +176,54 @@ export function FileExplorer({
         document.addEventListener("click", close);
         return () => document.removeEventListener("click", close);
     }, [contextMenu]);
+
+    const [sortField, setSortField] = useState<"name" | "size" | "type" | "lastModified">("name");
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+    const handleSort = (field: typeof sortField) => {
+        if (sortField === field) {
+            setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+        } else {
+            setSortField(field);
+            setSortDir("asc");
+        }
+    };
+
+    const sortedItems = useMemo(() => {
+        const items: SortableItem[] = [
+            ...folders.map((f) => ({ kind: "folder" as const, ...f })),
+            ...files.map((f) => ({ kind: "file" as const, ...f })),
+        ];
+        items.sort((a, b) => {
+            if (a.kind !== b.kind) return a.kind === "folder" ? -1 : 1;
+            const dir = sortDir === "asc" ? 1 : -1;
+            switch (sortField) {
+                case "name": {
+                    const aName = a.kind === "folder" ? a.displayName : a.name;
+                    const bName = b.kind === "folder" ? b.displayName : b.name;
+                    return aName.localeCompare(bName) * dir;
+                }
+                case "size": {
+                    const aSize = a.kind === "folder" ? -1 : a.size;
+                    const bSize = b.kind === "folder" ? -1 : b.size;
+                    return (aSize - bSize) * dir;
+                }
+                case "type": {
+                    const aType = a.kind === "folder" ? "" : (a.name.split(".").pop() || "");
+                    const bType = b.kind === "folder" ? "" : (b.name.split(".").pop() || "");
+                    return aType.localeCompare(bType) * dir;
+                }
+                case "lastModified": {
+                    const aDate = a.kind === "folder" ? 0 : new Date(a.lastModified).getTime();
+                    const bDate = b.kind === "folder" ? 0 : new Date(b.lastModified).getTime();
+                    return (aDate - bDate) * dir;
+                }
+                default:
+                    return 0;
+            }
+        });
+        return items;
+    }, [folders, files, sortField, sortDir]);
 
     if (loading) {
         return viewMode === "list" ? <SkeletonList /> : <SkeletonGrid />;
@@ -346,57 +396,79 @@ export function FileExplorer({
     };
 
     if (viewMode === "list") {
+        const SortIcon = sortDir === "asc" ? ArrowUp : ArrowDown;
         return (
             <div className="**:data-[slot=table-container]:overflow-visible">
                 <Table>
                     <TableHeader className="sticky top-0 z-30 bg-background">
                         <TableRow>
-                            <TableHead className="w-100">Name</TableHead>
-                            <TableHead>Size</TableHead>
-                            <TableHead>Type</TableHead>
-                            <TableHead>Last Modified</TableHead>
+                            <TableHead className="w-100 cursor-pointer select-none" onClick={() => handleSort("name")}>
+                                <div className="flex items-center gap-1">
+                                    Name
+                                    {sortField === "name" && <SortIcon className="h-3 w-3" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer select-none" onClick={() => handleSort("size")}>
+                                <div className="flex items-center gap-1">
+                                    Size
+                                    {sortField === "size" && <SortIcon className="h-3 w-3" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer select-none" onClick={() => handleSort("type")}>
+                                <div className="flex items-center gap-1">
+                                    Type
+                                    {sortField === "type" && <SortIcon className="h-3 w-3" />}
+                                </div>
+                            </TableHead>
+                            <TableHead className="cursor-pointer select-none" onClick={() => handleSort("lastModified")}>
+                                <div className="flex items-center gap-1">
+                                    Last Modified
+                                    {sortField === "lastModified" && <SortIcon className="h-3 w-3" />}
+                                </div>
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {folders.map((folder) => (
-                            <TableRow
-                                key={folder.name}
-                                className="cursor-pointer"
-                                onClick={() => onFolderClick(folder.name)}
-                                onContextMenu={(e) => handleContextMenu(e, folder, "folder")}
-                            >
-                                <TableCell className="font-medium">
-                                    <div className="flex items-center gap-2">
-                                        <FaFolder className="h-4 w-4 text-amber-500" />
-                                        {folder.displayName}
-                                    </div>
-                                </TableCell>
-                                <TableCell>--</TableCell>
-                                <TableCell>Folder</TableCell>
-                                <TableCell>--</TableCell>
-                            </TableRow>
-                        ))}
-                        {files.map((file) => (
-                            <TableRow
-                                key={file.key}
-                                className="cursor-pointer"
-                                onClick={() => onFileClick(file)}
-                                onContextMenu={(e) => handleContextMenu(e, file, "file")}
-                            >
-                                <TableCell className="font-medium">
-                                    <div className="flex items-center gap-2">
-                                        {getFileIcon(file.name, "h-4 w-4")}
-                                        {file.name}
-                                    </div>
-                                </TableCell>
-                                <TableCell>{formatSize(file.size)}</TableCell>
-                                <TableCell>{file.name.split(".").pop() || "file"}</TableCell>
-                                <TableCell>
-                                    {new Date(file.lastModified).toLocaleString()}
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {folders.length === 0 && files.length === 0 && (
+                        {sortedItems.map((item) =>
+                            item.kind === "folder" ? (
+                                <TableRow
+                                    key={item.name}
+                                    className="cursor-pointer"
+                                    onClick={() => onFolderClick(item.name)}
+                                    onContextMenu={(e) => handleContextMenu(e, item, "folder")}
+                                >
+                                    <TableCell className="font-medium">
+                                        <div className="flex items-center gap-2">
+                                            <FaFolder className="h-4 w-4 text-amber-500" />
+                                            {item.displayName}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>--</TableCell>
+                                    <TableCell>Folder</TableCell>
+                                    <TableCell>--</TableCell>
+                                </TableRow>
+                            ) : (
+                                <TableRow
+                                    key={item.key}
+                                    className="cursor-pointer"
+                                    onClick={() => onFileClick(item)}
+                                    onContextMenu={(e) => handleContextMenu(e, item, "file")}
+                                >
+                                    <TableCell className="font-medium">
+                                        <div className="flex items-center gap-2">
+                                            {getFileIcon(item.name, "h-4 w-4")}
+                                            {item.name}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>{formatSize(item.size)}</TableCell>
+                                    <TableCell>{item.name.split(".").pop() || "file"}</TableCell>
+                                    <TableCell>
+                                        {new Date(item.lastModified).toLocaleString()}
+                                    </TableCell>
+                                </TableRow>
+                            ),
+                        )}
+                        {sortedItems.length === 0 && (
                             <TableRow>
                                 <TableCell
                                     colSpan={4}
@@ -434,7 +506,7 @@ export function FileExplorer({
                         <FaFolder className="h-20 w-20 text-amber-500" />
                     </div>
                     <div className="w-full mt-auto py-1 px-1">
-                        <span className="text-[11px] font-medium truncate block w-full text-foreground/70 group-hover:text-foreground transition-colors">
+                        <span className="text-sm font-medium truncate block w-full text-foreground transition-colors">
                             {folder.displayName}
                         </span>
                     </div>
@@ -468,7 +540,7 @@ export function FileExplorer({
                         </div>
                         <div className="w-full mt-auto py-1 px-1">
                             <span
-                                className="text-[11px] font-medium truncate block w-full text-foreground/70 group-hover:text-foreground transition-colors"
+                                className="text-sm font-medium truncate block w-full text-foreground transition-colors"
                                 title={file.name}
                             >
                                 {file.name}
