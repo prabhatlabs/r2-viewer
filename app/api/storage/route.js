@@ -1,5 +1,5 @@
 // app/api/storage/route.js
-import { s3Client } from "@/lib/s3";
+import { getClientAndBucketFromRequest } from "@/lib/s3";
 import { 
   ListObjectsV2Command, 
   DeleteObjectCommand,
@@ -10,22 +10,20 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { NextResponse } from "next/server";
 
-const BUCKET = process.env.S3_BUCKET;
-
 // Helper function to recursively list ALL objects in bucket
-async function listAllObjects(prefix = "") {
+async function listAllObjects({ client, bucket, prefix = "" }) {
   let allObjects = [];
   let continuationToken = null;
 
   do {
     const command = new ListObjectsV2Command({
-      Bucket: BUCKET,
+      Bucket: bucket,
       Prefix: prefix,
       ContinuationToken: continuationToken,
       MaxKeys: 1000,
     });
 
-    const data = await s3Client.send(command);
+    const data = await client.send(command);
     
     if (data.Contents) {
       allObjects = allObjects.concat(data.Contents);
@@ -39,6 +37,7 @@ async function listAllObjects(prefix = "") {
 
 // 1. GET: List Files & Folders with Pagination
 export async function GET(request) {
+  const { client: s3, bucket } = getClientAndBucketFromRequest(request);
   const { searchParams } = new URL(request.url);
   const prefix = searchParams.get("prefix") || "";
   const page = parseInt(searchParams.get("page")) || 1;
@@ -49,7 +48,7 @@ export async function GET(request) {
     // Fetch all files for total stats (only if requested)
     let allFilesData = [];
     if (includeAllStats) {
-      const allObjects = await listAllObjects();
+      const allObjects = await listAllObjects({ client: s3, bucket });
       allFilesData = allObjects
         .filter((f) => !f.Key.endsWith('/'))
         .map((f) => ({
@@ -62,13 +61,13 @@ export async function GET(request) {
 
     // Regular folder listing (current folder only)
     const command = new ListObjectsV2Command({
-      Bucket: BUCKET,
+      Bucket: bucket,
       Prefix: prefix,
       Delimiter: "/",
       MaxKeys: 1000, // Get all items in current folder for pagination
     });
 
-    const data = await s3Client.send(command);
+    const data = await s3.send(command);
 
     // Extract Folders
     const folders = (data.CommonPrefixes || []).map((p) => ({
@@ -102,8 +101,8 @@ export async function GET(request) {
       allCurrentFiles
         .slice(startIndex, endIndex)
         .map(async (f) => {
-          const getCmd = new GetObjectCommand({ Bucket: BUCKET, Key: f.key });
-          const url = await getSignedUrl(s3Client, getCmd, { expiresIn: 3600 });
+          const getCmd = new GetObjectCommand({ Bucket: bucket, Key: f.key });
+          const url = await getSignedUrl(s3, getCmd, { expiresIn: 3600 });
           return { ...f, url };
         })
     );
@@ -129,6 +128,7 @@ export async function GET(request) {
 
 // 2. POST: Generate Presigned URL for Upload OR Bulk Delete
 export async function POST(request) {
+  const { client: s3, bucket } = getClientAndBucketFromRequest(request);
   const body = await request.json();
 
   // Handle bulk delete
@@ -147,14 +147,14 @@ export async function POST(request) {
         const chunk = keys.slice(i, i + 1000);
         
         const command = new DeleteObjectsCommand({
-          Bucket: BUCKET,
+          Bucket: bucket,
           Delete: {
             Objects: chunk.map(key => ({ Key: key })),
             Quiet: false,
           },
         });
 
-        const response = await s3Client.send(command);
+        const response = await s3.send(command);
         
         if (response.Deleted) {
           results.deleted.push(...response.Deleted.map(d => d.Key));
@@ -185,12 +185,12 @@ export async function POST(request) {
 
   try {
     const command = new PutObjectCommand({
-      Bucket: BUCKET,
+      Bucket: bucket,
       Key: filename,
       ContentType: contentType,
     });
 
-    const url = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+    const url = await getSignedUrl(s3, command, { expiresIn: 300 });
     return NextResponse.json({ url });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -199,6 +199,7 @@ export async function POST(request) {
 
 // 3. DELETE: Remove a single file
 export async function DELETE(request) {
+  const { client: s3, bucket } = getClientAndBucketFromRequest(request);
   const { searchParams } = new URL(request.url);
   const key = searchParams.get("key");
 
@@ -207,7 +208,7 @@ export async function DELETE(request) {
   }
 
   try {
-    await s3Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+    await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
