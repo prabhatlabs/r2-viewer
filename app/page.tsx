@@ -6,11 +6,11 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { Header } from "@/components/header"
 import { TopNav } from "@/components/top-nav"
 import { FileExplorer } from "@/components/file-explorer"
-import { FilePreview } from "@/components/file-preview"
+import { FileDetail } from "@/components/file-detail"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Loader2 } from "lucide-react"
+
 import { useUIStore } from "@/lib/store"
 
 const api = axios.create()
@@ -193,28 +193,23 @@ export default function Page() {
             />
             
             <ScrollArea className="flex-1 overflow-hidden">
-              {loading ? (
-                <div className="flex h-[400px] items-center justify-center">
-                  <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-                </div>
-              ) : (
-                <FileExplorer 
+              <FileExplorer 
                   folders={filteredFolders}
                   files={filteredFiles}
                   viewMode={effectiveViewMode}
+                  loading={loading}
                   onFolderClick={(name) => handleNavigate(name)}
                   onFileClick={setSelectedFile}
                   onDelete={handleDelete}
                   onDownload={handleDownload}
                   onCopyLink={handleCopyLink}
                 />
-              )}
             </ScrollArea>
           </main>
         </div>
       </SidebarInset>
 
-      <FilePreview 
+      <FileDetail 
         file={selectedFile}
         onClose={() => setSelectedFile(null)}
         onDelete={handleDelete}

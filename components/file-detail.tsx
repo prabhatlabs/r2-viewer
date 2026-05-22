@@ -1,26 +1,29 @@
 "use client";
 
-import * as React from "react";
 import {
-  X,
-  Download,
-  Trash2,
-  Copy,
-  ExternalLink,
-  Info,
   Calendar,
+  Copy,
+  Download,
+  ExternalLink,
   HardDrive,
-  FileText,
+  Info,
+  Trash2,
   Type,
+  X,
 } from "lucide-react";
+import {
+  FaFileAudio,
+  FaFileCode,
+  FaFilePdf,
+  FaRegFile,
+} from "react-icons/fa";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-interface FilePreviewProps {
+interface FileDetailProps {
   file: any | null;
   onClose: () => void;
   onDelete: (key: string) => void;
@@ -61,19 +64,18 @@ const getFileCategory = (filename: string) => {
   return "other";
 };
 
-export function FilePreview({
+export function FileDetail({
   file,
   onClose,
   onDelete,
   onDownload,
   onCopyLink,
-}: FilePreviewProps) {
+}: FileDetailProps) {
   const isOpen = !!file;
   const category = file ? getFileCategory(file.name) : null;
 
   return (
     <>
-      {/* Backdrop */}
       <div
         className={cn(
           "fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] transition-opacity duration-300",
@@ -84,7 +86,6 @@ export function FilePreview({
         onClick={onClose}
       />
 
-      {/* Slide-over Panel */}
       <aside
         className={cn(
           "fixed top-0 right-0 z-50 h-full w-[350px] max-w-full bg-background shadow-2xl transition-transform duration-300 ease-in-out flex flex-col border-l",
@@ -122,14 +123,15 @@ export function FilePreview({
                     className="w-full h-full object-cover"
                   />
                 )}
-                {category !== "image" && category !== "video" && (
-                  <FileText className="h-12 w-12 text-muted-foreground opacity-20" />
-                )}
+                {category === "audio" && <FaFileAudio className="h-12 w-12 text-muted-foreground opacity-20" />}
+                {category === "pdf" && <FaFilePdf className="h-12 w-12 text-muted-foreground opacity-20" />}
+                {category === "code" && <FaFileCode className="h-12 w-12 text-muted-foreground opacity-20" />}
+                {category === "other" && <FaRegFile className="h-12 w-12 text-muted-foreground opacity-20" />}
               </div>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <h4 className="text-sm font-medium text-muted-foreground mb-1">
+                  <h4 className="text-sm font-medium text-muted-foreground">
                     Name
                   </h4>
                   <p className="text-sm font-semibold break-all leading-tight">
@@ -137,27 +139,26 @@ export function FilePreview({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 border p-3 rounded-lg bg-muted/20">
-                  <div>
-                    <h4 className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1 uppercase tracking-wider">
-                      <HardDrive className="h-3 w-3" /> Size
-                    </h4>
-                    <p className="text-sm font-semibold">
-                      {formatSize(file.size)}
-                    </p>
-                  </div>
-                  <div>
-                    <h4 className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1 uppercase tracking-wider">
-                      <Type className="h-3 w-3" /> Type
-                    </h4>
-                    <p className="text-sm font-semibold">
-                      {file.name.split(".").pop() || "file"}
-                    </p>
-                  </div>
+                <div>
+                  <h4 className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 uppercase tracking-wider">
+                    <HardDrive className="h-3 w-3" /> Size
+                  </h4>
+                  <p className="text-sm font-semibold">
+                    {formatSize(file.size)}
+                  </p>
                 </div>
 
                 <div>
-                  <h4 className="text-[11px] font-medium text-muted-foreground mb-1 flex items-center gap-1 uppercase tracking-wider">
+                  <h4 className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 uppercase tracking-wider">
+                    <Type className="h-3 w-3" /> Type
+                  </h4>
+                  <p className="text-sm font-semibold">
+                    {file.name.split(".").pop() || "file"}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 uppercase tracking-wider">
                     <Calendar className="h-3 w-3" /> Last Modified
                   </h4>
                   <p className="text-sm font-semibold">
@@ -196,15 +197,13 @@ export function FilePreview({
                     <ExternalLink className="h-4 w-4" /> Open in New Tab
                   </a>
                 </Button>
-                <div className="pt-2">
-                  <Button
-                    className="w-full justify-start gap-3 h-10 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-                    variant="ghost"
-                    onClick={() => onDelete(file.key)}
-                  >
-                    <Trash2 className="h-4 w-4" /> Delete File
-                  </Button>
-                </div>
+                <Button
+                  className="w-full justify-start gap-3 h-10 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                  variant="ghost"
+                  onClick={() => onDelete(file.key)}
+                >
+                  <Trash2 className="h-4 w-4" /> Delete File
+                </Button>
               </div>
             </div>
           </ScrollArea>
