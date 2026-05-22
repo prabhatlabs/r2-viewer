@@ -14,7 +14,6 @@ import {
     Monitor,
     Palette,
 } from "lucide-react";
-import type { AxiosInstance } from "axios";
 
 import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,6 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { api } from "@/lib/api";
 import { useUIStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
@@ -32,7 +32,6 @@ import { useTheme } from "next-themes";
 interface SettingsDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    api: AxiosInstance;
 }
 
 interface MethodsState {
@@ -43,7 +42,7 @@ interface MethodsState {
     HEAD: boolean;
 }
 
-export function SettingsDialog({ isOpen, onClose, api }: SettingsDialogProps) {
+export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     const { theme, setTheme } = useTheme();
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -90,7 +89,7 @@ export function SettingsDialog({ isOpen, onClose, api }: SettingsDialogProps) {
             }
         };
         doFetch();
-    }, [isOpen, credentials, api]);
+    }, [isOpen, credentials]);
 
     const handleSaveCredentials = () => {
         setCredentials(localCreds);

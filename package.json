@@ -6,9 +6,6 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "pages:build": "npx @cloudflare/next-on-pages",
-        "pages:deploy": "bun run pages:build && wrangler pages deploy",
-        "pages:dev": "npx @cloudflare/next-on-pages --dev",
         "lint": "eslint",
         "format": "prettier --write ."
     },
@@ -19,7 +16,6 @@
         "axios": "^1.16.1",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "jose": "^6.2.3",
         "lucide-react": "^1.16.0",
         "next": "^16.2.6",
         "next-themes": "^0.4.6",

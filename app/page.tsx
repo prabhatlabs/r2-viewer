@@ -11,22 +11,9 @@ import { SettingsDialog } from "@/components/settings-dialog";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { api } from "@/lib/api";
 import { useUIStore } from "@/lib/store";
 import type { FileItem, FolderItem } from "@/lib/types";
-
-const api = axios.create();
-
-api.interceptors.request.use((config) => {
-    try {
-        const { credentials } = useUIStore.getState();
-        if (credentials.accountId) config.headers["x-r2-account-id"] = credentials.accountId;
-        if (credentials.accessKeyId) config.headers["x-r2-access-key-id"] = credentials.accessKeyId;
-        if (credentials.secretAccessKey)
-            config.headers["x-r2-secret-access-key"] = credentials.secretAccessKey;
-        if (credentials.bucketName) config.headers["x-r2-bucket-name"] = credentials.bucketName;
-    } catch {}
-    return config;
-});
 
 export default function Page() {
     const [currentPath, setCurrentPath] = useState("");
@@ -229,7 +216,6 @@ export default function Page() {
             <SettingsDialog
                 isOpen={isSettingsOpen}
                 onClose={() => setIsSettingsOpen(false)}
-                api={api}
             />
         </SidebarProvider>
     );
