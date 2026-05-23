@@ -13,6 +13,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import { api } from "@/lib/api";
 import { useUIStore } from "@/lib/store";
+import { useStorageStore } from "@/lib/store-storage";
 import type { FileItem, FolderItem } from "@/lib/types";
 
 export default function Page() {
@@ -26,6 +27,7 @@ export default function Page() {
     const [searchQuery, setSearchQuery] = useState("");
 
     const { viewMode, setViewMode, _hasHydrated, credentials } = useUIStore();
+    const { fetchFiles, updateFiles, invalidateCache } = useStorageStore();
     const effectiveViewMode = _hasHydrated ? viewMode : "grid";
 
     const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
@@ -52,24 +54,22 @@ export default function Page() {
         [credentials.customDomain, credentials.bucketName],
     );
 
-    const fetchContent = useCallback(async () => {
-        setLoading(true);
-        try {
-            const { data } = await api.get<{ folders: FolderItem[]; files: FileItem[] }>(
-                `/api/storage?prefix=${encodeURIComponent(currentPath)}&limit=1000`,
-            );
-            setFolders(data.folders || []);
-            const processedFiles = (data.files || []).map((file) => ({
-                ...file,
-                displayUrl: getFileUrl(file.url),
-            }));
-            setFiles(processedFiles);
-        } catch {
-            console.error("Failed to fetch content");
-        } finally {
+    const fetchContent = useCallback(
+        async (force = false) => {
+            setLoading(true);
+            const data = await fetchFiles(currentPath, force);
+            if (data) {
+                setFolders(data.folders || []);
+                const processedFiles = (data.files || []).map((file) => ({
+                    ...file,
+                    displayUrl: getFileUrl(file.url),
+                }));
+                setFiles(processedFiles);
+            }
             setLoading(false);
-        }
-    }, [currentPath, getFileUrl]);
+        },
+        [currentPath, fetchFiles, getFileUrl],
+    );
 
     useEffect(() => {
         fetchContent();
@@ -107,6 +107,10 @@ export default function Page() {
         if (!confirm("Are you sure you want to delete this file?")) return;
         try {
             await api.delete(`/api/storage?key=${encodeURIComponent(key)}`);
+            updateFiles(currentPath, (prev) => ({
+                ...prev,
+                files: prev.files.filter((f) => f.key !== key),
+            }));
             fetchContent();
             if (selectedFile?.key === key) setSelectedFile(null);
         } catch {
@@ -129,6 +133,7 @@ export default function Page() {
                     contentType: file.type,
                 });
                 await axios.put(data.url, file, { headers: { "Content-Type": file.type } });
+                invalidateCache(currentPath);
                 fetchContent();
             } catch {
                 alert("Upload failed");
@@ -136,6 +141,7 @@ export default function Page() {
         };
         input.click();
     };
+
 
     const handleCopyLink = async (url: string) => {
         try {

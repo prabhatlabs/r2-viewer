@@ -7,6 +7,7 @@ import {
     ExternalLink,
     HardDrive,
     Info,
+    Maximize2,
     Trash2,
     Type,
     X,
@@ -19,6 +20,8 @@ import Image from "next/image";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { FileItem } from "@/lib/types";
+import { FilePreview } from "@/components/file-preview";
+import { useState } from "react";
 
 interface FileDetailProps {
     file: FileItem | null;
@@ -42,12 +45,13 @@ const getFileCategory = (filename: string) => {
     if (["mp4", "webm", "mov", "avi", "mkv"].includes(ext || "")) return "video";
     if (["mp3", "wav", "ogg", "m4a"].includes(ext || "")) return "audio";
     if (["pdf"].includes(ext || "")) return "pdf";
-    if (["txt", "md", "json", "js", "ts", "css", "html", "xml", "log", "env"].includes(ext || ""))
+    if (["txt", "md", "json", "js", "ts", "tsx", "css", "html", "xml", "log", "env", "csv"].includes(ext || ""))
         return "code";
     return "other";
 };
 
 export function FileDetail({ file, onClose, onDelete, onDownload, onCopyLink }: FileDetailProps) {
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const isOpen = !!file;
     const category = file ? getFileCategory(file.name) : null;
 
@@ -149,6 +153,13 @@ export function FileDetail({ file, onClose, onDelete, onDownload, onCopyLink }: 
                                 <Button
                                     className="w-full justify-start gap-3 h-10"
                                     variant="outline"
+                                    onClick={() => setIsPreviewOpen(true)}
+                                >
+                                    <Maximize2 className="h-4 w-4" /> Open
+                                </Button>
+                                <Button
+                                    className="w-full justify-start gap-3 h-10"
+                                    variant="outline"
                                     onClick={() => onCopyLink(file.displayUrl || file.url)}
                                 >
                                     <Copy className="h-4 w-4" /> Copy Direct Link
@@ -185,6 +196,12 @@ export function FileDetail({ file, onClose, onDelete, onDownload, onCopyLink }: 
                     </ScrollArea>
                 )}
             </aside>
+
+            <FilePreview
+                file={file}
+                isOpen={isPreviewOpen}
+                onClose={() => setIsPreviewOpen(false)}
+            />
         </>
     );
 }
