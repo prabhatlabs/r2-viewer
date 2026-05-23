@@ -1,18 +1,19 @@
 "use client";
 
 import {
-    FileText,
-    Info,
-    Key,
-    Loader2,
-    Monitor,
-    Moon,
-    Network,
-    Palette,
-    Save,
     Settings,
+    Key,
     ShieldCheck,
+    Save,
+    Loader2,
+    Info,
+    Network,
     Sun,
+    Moon,
+    Monitor,
+    Palette,
+    FileText,
+    Database,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -176,7 +177,6 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                                 <TabsTrigger
                                     value="advanced"
                                     className="justify-start gap-2 h-9 px-3"
-                                    disabled
                                 >
                                     <ShieldCheck className="h-4 w-4" /> Advanced
                                 </TabsTrigger>
@@ -464,6 +464,29 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                                                     <span className="text-xs">System</span>
                                                 </Button>
                                             </div>
+                                        </div>
+                                    </TabsContent>
+                                    <TabsContent value="advanced" className="m-0 space-y-6">
+                                        <div>
+                                            <h3 className="text-lg font-medium">Advanced</h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Advanced configuration and experimental features.
+                                            </p>
+                                        </div>
+                                        <Separator />
+                                        <div className="flex items-center justify-between border rounded-lg p-4">
+                                            <div className="space-y-0.5">
+                                                <Label className="text-base flex items-center gap-2">
+                                                    <Database className="h-4 w-4" /> Enable Cache
+                                                </Label>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Use a 30-minute local cache for file list requests to improve performance.
+                                                </p>
+                                            </div>
+                                            <Checkbox
+                                                checked={useCache}
+                                                onCheckedChange={(checked) => setUseCache(!!checked)}
+                                            />
                                         </div>
                                     </TabsContent>
                                 </div>

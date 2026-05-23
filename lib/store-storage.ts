@@ -9,6 +9,8 @@ interface CacheEntry {
 
 interface StorageState {
     cache: Record<string, CacheEntry>;
+    useCache: boolean;
+    setUseCache: (useCache: boolean) => void;
     fetchFiles: (prefix: string, force?: boolean) => Promise<StorageResponse | null>;
     updateFiles: (prefix: string, updater: (prev: StorageResponse) => StorageResponse) => void;
     invalidateCache: (prefix?: string) => void;
@@ -20,11 +22,13 @@ export const useStorageStore = create<StorageState>()(
     persist(
         (set, get) => ({
             cache: {},
+            useCache: true,
+            setUseCache: (useCache) => set({ useCache }),
             fetchFiles: async (prefix: string, force: boolean = false) => {
                 const now = Date.now();
                 const cached = get().cache[prefix];
 
-                if (!force && cached && now - cached.timestamp < CACHE_DURATION) {
+                if (!force && get().useCache && cached && now - cached.timestamp < CACHE_DURATION) {
                     return cached.data;
                 }
 
@@ -33,12 +37,14 @@ export const useStorageStore = create<StorageState>()(
                     if (!response.ok) throw new Error("Failed to fetch");
                     const data: StorageResponse = await response.json();
 
-                    set((state) => ({
-                        cache: {
-                            ...state.cache,
-                            [prefix]: { data, timestamp: now },
-                        },
-                    }));
+                    if (get().useCache) {
+                        set((state) => ({
+                            cache: {
+                                ...state.cache,
+                                [prefix]: { data, timestamp: now },
+                            },
+                        }));
+                    }
                     return data;
                 } catch (error) {
                     console.error("Storage fetch error:", error);
