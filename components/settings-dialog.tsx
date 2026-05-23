@@ -1,29 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import {
-    Settings,
-    Key,
-    ShieldCheck,
-    Save,
-    Loader2,
+    FileText,
     Info,
-    Network,
-    Sun,
-    Moon,
+    Key,
+    Loader2,
     Monitor,
+    Moon,
+    Network,
     Palette,
+    Save,
+    Settings,
+    ShieldCheck,
+    Sun,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useUIStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -94,6 +96,26 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     const handleSaveCredentials = () => {
         setCredentials(localCreds);
         alert("Credentials saved!");
+    };
+
+    const handleParseEnv = (envContent: string) => {
+        const lines = envContent.split("\n");
+        const newCreds = { ...localCreds };
+        lines.forEach((line) => {
+            const [key, ...valueParts] = line.split("=");
+            const value = valueParts
+                .join("=")
+                .trim()
+                .replace(/^['"]|['"]$/g, "");
+            if (!key || !value) return;
+
+            const k = key.trim();
+            if (k.includes("ACCOUNT_ID")) newCreds.accountId = value;
+            if (k.includes("BUCKET_NAME")) newCreds.bucketName = value;
+            if (k.includes("ACCESS_KEY_ID")) newCreds.accessKeyId = value;
+            if (k.includes("SECRET_ACCESS_KEY")) newCreds.secretAccessKey = value;
+        });
+        setLocalCreds(newCreds);
     };
 
     const handleSaveSettings = async () => {
@@ -257,6 +279,29 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                                                 placeholder="https://files.example.com"
                                             />
                                         </div>
+
+                                        <div className="relative flex items-center gap-2">
+                                            <Separator />
+                                            <span className="absolute top-1/2 left-1/2 transform -translate-y-1/2 -translate-x-1/2 bg-background px-2 text-muted-foreground">
+                                                or
+                                            </span>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <Label
+                                                htmlFor="env-import"
+                                                className="flex items-center gap-2"
+                                            >
+                                                <FileText className="h-4 w-4" /> Import from .env
+                                            </Label>
+                                            <Textarea
+                                                id="env-import"
+                                                placeholder={`R2_ACCOUNT_ID=\nR2_BUCKET_NAME=\nR2_ACCESS_KEY_ID=\nR2_SECRET_ACCESS_KEY=`}
+                                                className="font-mono text-xs min-h-40"
+                                                onChange={(e) => handleParseEnv(e.target.value)}
+                                            />
+                                        </div>
+
                                         <div className="pt-2">
                                             <Button
                                                 onClick={handleSaveCredentials}
@@ -265,6 +310,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
                                                 <Save className="h-4 w-4" /> Save Credentials
                                             </Button>
                                         </div>
+
                                         <Alert className="bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300">
                                             <Info className="h-4 w-4" />
                                             <AlertTitle>Security Note</AlertTitle>
