@@ -29,6 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { useUIStore } from "@/lib/store";
+import { useStorageStore } from "@/lib/store-storage";
 import { cn } from "@/lib/utils";
 import { useTheme } from "next-themes";
 
@@ -60,6 +61,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     });
 
     const { credentials, setCredentials } = useUIStore();
+    const { useCache, setUseCache } = useStorageStore();
     const [localCreds, setLocalCreds] = useState(credentials);
 
     useEffect(() => {
@@ -184,7 +186,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
 
                             <div className="mt-auto p-4 border-t">
                                 <DialogDescription className="text-[10px]">
-                                    Cloudflare R2 Viewer v0.1.0
+                                    Cloudflare R2 Viewer v0.2.0
                                 </DialogDescription>
                             </div>
                         </aside>

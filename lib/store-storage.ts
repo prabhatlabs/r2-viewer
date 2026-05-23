@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { StorageResponse, FileItem } from "@/lib/types";
+import { api } from "@/lib/api";
 
 interface CacheEntry {
     data: StorageResponse;
@@ -11,6 +12,8 @@ interface StorageState {
     cache: Record<string, CacheEntry>;
     useCache: boolean;
     setUseCache: (useCache: boolean) => void;
+    foldersTree: string[];
+    fetchFoldersTree: (force?: boolean) => Promise<void>;
     fetchFiles: (prefix: string, force?: boolean) => Promise<StorageResponse | null>;
     updateFiles: (prefix: string, updater: (prev: StorageResponse) => StorageResponse) => void;
     invalidateCache: (prefix?: string) => void;
@@ -24,6 +27,31 @@ export const useStorageStore = create<StorageState>()(
             cache: {},
             useCache: true,
             setUseCache: (useCache) => set({ useCache }),
+            foldersTree: [],
+            fetchFoldersTree: async (force = false) => {
+                if (!force && get().foldersTree.length > 0) return;
+
+                try {
+                    const response = await api.get(`/api/storage?includeAllStats=true`);
+                    const allFiles = response.data.allFiles || [];
+                    const uniqueFolders = new Set<string>();
+
+                    allFiles.forEach((file: FileItem) => {
+                        const parts = file.key.split("/");
+                        parts.pop(); // Remove file name
+                        let current = "";
+                        parts.forEach((part: string) => {
+                            current = current ? `${current}/${part}/` : `${part}/`;
+                            uniqueFolders.add(current);
+                        });
+                    });
+
+                    const foldersTree = Array.from(uniqueFolders).sort();
+                    set({ foldersTree });
+                } catch (error) {
+                    console.error("Failed to fetch folders tree:", error);
+                }
+            },
             fetchFiles: async (prefix: string, force: boolean = false) => {
                 const now = Date.now();
                 const cached = get().cache[prefix];
@@ -33,9 +61,8 @@ export const useStorageStore = create<StorageState>()(
                 }
 
                 try {
-                    const response = await fetch(`/api/storage?prefix=${encodeURIComponent(prefix)}`);
-                    if (!response.ok) throw new Error("Failed to fetch");
-                    const data: StorageResponse = await response.json();
+                    const response = await api.get<StorageResponse>(`/api/storage?prefix=${encodeURIComponent(prefix)}`);
+                    const data = response.data;
 
                     if (get().useCache) {
                         set((state) => ({

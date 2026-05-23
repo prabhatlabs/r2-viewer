@@ -27,7 +27,7 @@ export default function Page() {
     const [searchQuery, setSearchQuery] = useState("");
 
     const { viewMode, setViewMode, _hasHydrated, credentials } = useUIStore();
-    const { fetchFiles, updateFiles, invalidateCache } = useStorageStore();
+    const { fetchFiles, updateFiles, invalidateCache, fetchFoldersTree } = useStorageStore();
     const effectiveViewMode = _hasHydrated ? viewMode : "grid";
 
     const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
@@ -75,6 +75,12 @@ export default function Page() {
         fetchContent();
     }, [fetchContent]);
 
+    useEffect(() => {
+        if (credentials.bucketName) {
+            fetchFoldersTree(true);
+        }
+    }, [credentials, fetchFoldersTree]);
+
     const handleNavigate = (path: string, pushToHistory = true) => {
         setCurrentPath(path);
         setSelectedFile(null);
@@ -112,6 +118,7 @@ export default function Page() {
                 files: prev.files.filter((f) => f.key !== key),
             }));
             fetchContent();
+            fetchFoldersTree(true);
             if (selectedFile?.key === key) setSelectedFile(null);
         } catch {
             alert("Failed to delete file");
@@ -135,6 +142,7 @@ export default function Page() {
                 await axios.put(data.url, file, { headers: { "Content-Type": file.type } });
                 invalidateCache(currentPath);
                 fetchContent();
+                fetchFoldersTree(true);
             } catch {
                 alert("Upload failed");
             }
@@ -171,7 +179,7 @@ export default function Page() {
 
     return (
         <SidebarProvider>
-            <AppSidebar />
+            <AppSidebar currentPath={currentPath} onNavigate={(path) => handleNavigate(path)} />
             <SidebarInset className="flex flex-col h-screen overflow-hidden">
                 <Header
                     onUpload={handleUpload}
