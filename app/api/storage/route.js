@@ -59,25 +59,41 @@ export async function GET(request) {
                 }));
         }
 
-        // Regular folder listing (current folder only)
-        const command = new ListObjectsV2Command({
-            Bucket: bucket,
-            Prefix: prefix,
-            Delimiter: "/",
-            MaxKeys: 1000, // Get all items in current folder for pagination
-        });
+        // Regular folder listing (current folder only) — loop to handle truncation
+        let allContents = [];
+        let allCommonPrefixes = [];
+        let folderContinuationToken = null;
 
-        const data = await s3.send(command);
+        do {
+            const command = new ListObjectsV2Command({
+                Bucket: bucket,
+                Prefix: prefix,
+                Delimiter: "/",
+                MaxKeys: 1000,
+                ContinuationToken: folderContinuationToken,
+            });
+
+            const data = await s3.send(command);
+
+            if (data.Contents) {
+                allContents = allContents.concat(data.Contents);
+            }
+            if (data.CommonPrefixes) {
+                allCommonPrefixes = allCommonPrefixes.concat(data.CommonPrefixes);
+            }
+
+            folderContinuationToken = data.NextContinuationToken;
+        } while (folderContinuationToken);
 
         // Extract Folders
-        const folders = (data.CommonPrefixes || []).map((p) => ({
+        const folders = allCommonPrefixes.map((p) => ({
             name: p.Prefix,
             displayName: p.Prefix.replace(prefix, "").replace("/", ""),
         }));
 
         // Extract ALL Files (current folder only)
         const allCurrentFiles = await Promise.all(
-            (data.Contents || [])
+            allContents
                 .filter((f) => f.Key !== prefix && !f.Key.endsWith("/"))
                 .map(async (f) => {
                     return {

@@ -19,7 +19,7 @@ interface StorageState {
     invalidateCache: (prefix?: string) => void;
 }
 
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
 export const useStorageStore = create<StorageState>()(
     persist(

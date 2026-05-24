@@ -2,9 +2,10 @@ export interface FileItem {
     key: string;
     name: string;
     size: number;
-    lastModified: number;
+    lastModified: number | string;
     url: string;
     displayUrl?: string;
+    type?: string;
 }
 
 export interface FolderItem {
